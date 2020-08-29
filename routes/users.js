@@ -1,11 +1,12 @@
 const express = require('express');
 const User = require('../models/user');
 const authenticate = require('../authenticate');
+const cors = require('./cors');
 
 const router = express.Router();
 
 /* GET users listing. */
-router.get('/', authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
+router.get('/', cors.corsWithOptions, authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
     User.find()
     .then(users => {
         res.statusCode = 200;
@@ -15,7 +16,7 @@ router.get('/', authenticate.verifyUser, authenticate.verifyAdmin, (req, res, ne
     .catch(err => next(err));
 });
 
-router.post('/signup', (req, res, next) => {
+router.post('/signup', cors.corsWithOptions, (req, res, next) => {
     User.findOne({username: req.body.username})
     .then(user => {
         if (user) {
@@ -37,7 +38,7 @@ router.post('/signup', (req, res, next) => {
     .catch(err => next(err));
 });
 
-router.post('/login', (req, res, next) => {
+router.post('/login', cors.corsWithOptions, (req, res, next) => {
     if(!req.session.user) {
         const authHeader = req.headers.authorization;
 
@@ -77,7 +78,7 @@ router.post('/login', (req, res, next) => {
     }
 });
 
-router.get('/logout', (req, res, next) => {
+router.get('/logout', cors.corsWithOptions, (req, res, next) => {
     if (req.session) {
       req.session.destroy();
       res.clearCookie('session-id');
@@ -86,6 +87,15 @@ router.get('/logout', (req, res, next) => {
       const err = new Error('You are not logged in!');
       err.status = 401;
       return next(err);
+    }
+});
+
+router.get('/facebook/token', passport.authenticate('facebook-token'), (req, res) => {
+    if (req.user) {
+        const token = authenticate.getToken({_id: req.user._id});
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'application/json');
+        res.json({success: true, token: token, status: 'You are successfully logged in!'});
     }
 });
 
